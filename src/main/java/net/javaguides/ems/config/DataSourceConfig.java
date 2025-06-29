@@ -1,37 +1,50 @@
 package net.javaguides.ems.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
-@EnableConfigurationProperties(DataSourceProperties.class)
 public class DataSourceConfig {
     @Bean
-    @ConditionalOnProperty(name = "app.datasource.primary", havingValue = "mysql", matchIfMissing = true)
-    public DataSource mysqlDataSource(DataSourceProperties properties) {
+    @Primary
+    public DataSource routingDataSource(
+            @Qualifier("mysqlDataSource") DataSource mysqlDataSource,
+            @Qualifier("h2DataSource") DataSource h2DataSource) {
+        Map<Object, Object> targetDataSources = new HashMap<>();
+        targetDataSources.put("mysql", mysqlDataSource);
+        targetDataSources.put("h2", h2DataSource);
+
+        RoutingDataSource routingDataSource = new RoutingDataSource();
+        routingDataSource.setTargetDataSources(targetDataSources);
+        routingDataSource.setDefaultTargetDataSource(mysqlDataSource);
+        return routingDataSource;
+    }
+
+    @Bean("mysqlDataSource")
+    public DataSource mysqlDataSource(Environment env) {
         return DataSourceBuilder.create()
-                .url(properties.getUrl())
-                .username(properties.getUsername())
-                .password(properties.getPassword())
-                .driverClassName(properties.getDriverClassName())
+                .url(env.getProperty("app.datasource.mysql.url"))
+                .username(env.getProperty("app.datasource.mysql.username"))
+                .password(env.getProperty("app.datasource.mysql.password"))
+                .driverClassName(env.getProperty("app.datasource.mysql.driver-class-name"))
                 .build();
     }
 
-    @Bean
-    @ConditionalOnProperty(name = "app.datasource.primary", havingValue = "h2")
-    public DataSource h2DataSource(DataSourceProperties properties) {
+    @Bean("h2DataSource")
+    public DataSource h2DataSource(Environment env) {
         return DataSourceBuilder.create()
-                .url(properties.getUrl())
-                .username(properties.getUsername())
-                .password(properties.getPassword())
-                .driverClassName(properties.getDriverClassName())
+                .url(env.getProperty("app.datasource.h2.url"))
+                .username(env.getProperty("app.datasource.h2.username"))
+                .password(env.getProperty("app.datasource.h2.password"))
+                .driverClassName(env.getProperty("app.datasource.h2.driver-class-name"))
                 .build();
     }
 }
