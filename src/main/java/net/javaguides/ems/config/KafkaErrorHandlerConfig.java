@@ -25,12 +25,13 @@ public class KafkaErrorHandlerConfig {
         // lambda to log with SLF4J when error handler is triggered
         DefaultErrorHandler errorHandler = new DefaultErrorHandler((record, ex) -> {
 
+            logger.warn("Kafka retry triggered for record offset={}, partition={}. Reason: {}", record.offset(), record.partition(), ex.getMessage());
 
-            if (ex.getCause() instanceof EmployeeServiceImpl.SilentRetryException) {
-                logger.warn("Silent retry — DB still down for record offset={}, partition={}", record.offset(), record.partition());
-            } else {
-                logger.warn("Kafka retry triggered for record offset={}, partition={}. Reason: {}", record.offset(), record.partition(), ex.getMessage());
-            }
+//            if (ex.getCause() instanceof EmployeeServiceImpl.SilentRetryException) {
+//                logger.warn("Silent retry — DB still down for record offset={}, partition={}", record.offset(), record.partition());
+//            } else {
+//                logger.warn("Kafka retry triggered for record offset={}, partition={}. Reason: {}", record.offset(), record.partition(), ex.getMessage());
+//            }
         }, backOff);
 
 
