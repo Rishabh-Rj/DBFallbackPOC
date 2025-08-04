@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +34,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     private static final Logger logger = LoggerFactory.getLogger(EmployeeServiceImpl.class);
     private static final String DB_CIRCUIT_BREAKER = "dbService";
 
+
+    private static final AtomicInteger kafkaRecoveryCounter = new AtomicInteger(0); // ✅ tracks saved events
+
     @Override
     @CircuitBreaker(name = DB_CIRCUIT_BREAKER, fallbackMethod = "fallbackSaveEmployee")
     public EmployeeDto createEmployee(EmployeeDto employeeDto) {
@@ -46,17 +50,13 @@ public class EmployeeServiceImpl implements EmployeeService {
         } catch (Exception e) {
             if (isConstraintViolation(e)) {
                 logger.warn("Duplicate or constraint violation. Not retrying. Employee: {}", employeeDto);
-                throw e; // Let controller/upper layer return proper response like 409
+                throw e;
             }
             logger.warn("DB save failed. Fallback triggered for Employee: {} | Reason: {}", employeeDto, e.getMessage());
-            throw e; // Let circuit breaker trigger fallback
+            throw e;
         }
     }
-//        catch (Exception e) {
-//            logger.warn("DB save failed. Falling back to Kafka. Employee: {}", employeeDto, e);
-//            throw e;
-//        }
-//    }
+
 
     private boolean isConstraintViolation(Throwable ex) {
         while (ex != null) {
@@ -79,13 +79,10 @@ public class EmployeeServiceImpl implements EmployeeService {
             logger.error("Fallback Kafka send failed for Employee: {} | Error: {}", employeeDto, ex.getMessage(), ex);
         }
 
-//        return employeeDto;
-//        kafkaTemplate.send("employee-events", event);
-//        logger.warn("Fallback: Employee event sent to Kafka. Employee: {}", employeeDto);
+
    return employeeDto;
     }
 
-    // Kafka consumer for recovery
     @KafkaListener(topics = "employee-events", groupId = "employee-consumer-group",containerFactory = "kafkaListenerContainerFactory")
     public void consumeEmployeeEvent(net.javaguides.ems.event.EmployeeEvent event, Acknowledgment ack) {
         try {
@@ -97,7 +94,13 @@ public class EmployeeServiceImpl implements EmployeeService {
             employee.setEmail(event.getEmail());
             employeeRepository.save(employee);
 //            ack.acknowledge();
-            logger.info("Kafka event saved to DB and offset acknowledged. Employee: {}", event);
+
+            kafkaRecoveryCounter.incrementAndGet(); // ✅ increase counter
+
+            ack.acknowledge();
+            logger.info("Kafka event saved to DB. Employee: {}", event);
+            logger.info("Total recovered so far in this session: {}", kafkaRecoveryCounter.get());
+//            logger.info("Kafka event saved to DB and offset acknowledged. Employee: {}", event);
         } catch (Exception ex) {
             if (isCausedByConnectionRefused(ex)) {
                 logger.warn("DB not reachable. Will retry Kafka event later. Employee: {}", event);
@@ -119,11 +122,6 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 
 
-//    public class SilentRetryException extends RuntimeException {
-//        public SilentRetryException(String message, Throwable cause) {
-//            super(message, cause);
-//        }
-//    }
 
     private boolean isCausedByConnectionRefused(Throwable ex) {
         while (ex != null) {

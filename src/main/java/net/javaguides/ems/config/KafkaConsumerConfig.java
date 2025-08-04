@@ -7,6 +7,7 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+//import org.springframework.kafka.listener.SeekToCurrentErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
 
@@ -18,8 +19,7 @@ public ConcurrentKafkaListenerContainerFactory<String, EmployeeEvent> kafkaListe
     ConcurrentKafkaListenerContainerFactory<String, EmployeeEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(consumerFactory);
     factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL); // your manual ack
-//    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
-//    factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(5000L, FixedBackOff.UNLIMITED_ATTEMPTS)));
-    factory.setCommonErrorHandler(kafkaErrorHandler);
+        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(5000L, FixedBackOff.UNLIMITED_ATTEMPTS)));
     return factory;
+
 }}

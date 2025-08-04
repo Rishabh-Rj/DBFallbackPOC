@@ -14,6 +14,8 @@
 	<name>ems-backend</name>
 	<description>Demo project for Spring Boot Employee Management System</description>
 	<properties>
+<!--		<spring-kafka.version>3.0.0</spring-kafka.version> &lt;!&ndash; example, use the one matching your spring-boot version &ndash;&gt;-->
+
 		<java.version>17</java.version>
 	</properties>
 	<dependencies>
@@ -37,6 +39,14 @@
 			<version>1.18.30</version>
 			<scope>provided</scope>
 		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+<!--			<version>${spring-kafka.version}</version>-->
+<!--			<scope>test</scope>-->
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -45,6 +55,7 @@
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka</artifactId>
+<!--			<version>${spring-kafka.version}</version>-->
 		</dependency>
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
